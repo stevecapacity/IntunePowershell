@@ -192,7 +192,7 @@ if($null -ne $omaJson){
     {
         "@odata.type" : "#microsoft.graph.windows10CustomConfiguration",
         "description": "",
-        "displayName": "GPO Policy Migrated V89001",
+        "displayName": "GPO CSP Policy",
         "version": 1,
         "omaSettings": [
               $omaJson
