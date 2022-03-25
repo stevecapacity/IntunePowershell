@@ -1,5 +1,5 @@
 ##############################################
-#LOGANS AUTH#
+Microsoft Graph Authentication
 ##############################################
 
 #Function to properly search all graph results
@@ -30,9 +30,9 @@ function Get-GraphPagedResult
 
 #App registration
 #******************************************************#
-$tenant = "ztdslabs.co"
-$clientId = "59a7d1ba-5f63-4059-976c-a7b1e53cfce0"
-$clientSecret = "2P~7Q~4HymP6~2swm8T96S7SpgQTVdKh71_Kk"
+$tenant = "<YOUR TENANT NAME>"
+$clientId = "<CLIENT / APPLICATION ID>"
+$clientSecret = "<CLIENT SECRET>"
 #******************************************************#
 
 
@@ -51,7 +51,7 @@ $headers.Add("Content-Type", "application/json")
 ## END AUTH ###
 ###############################################################################################
 
-$csvPath = "C:\GPO to CSP\gpo.csv"
+$csvPath = "<THE PATH TO YOUR GPO.CSV EXPORT>"
 
 $policies = Import-Csv -Path $csvPath
 
