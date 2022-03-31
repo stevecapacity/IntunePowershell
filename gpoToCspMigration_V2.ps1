@@ -29,6 +29,11 @@ foreach($module in $requiredModules)
     }
 }
 
+foreach($module in $requiredModules)
+{
+    Import-Module $module
+}
+
 Connect-MSGraph -ForceInteractive
 
 
