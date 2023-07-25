@@ -4,28 +4,6 @@
 
 $ErrorActionPreference = 'SilentlyContinue'
 
-function Get-GraphPagedResult {
-	param ([parameter(Mandatory = $true)]$Headers, [parameter(Mandatory = $true)]$Uri, [Parameter(Mandatory = $false)][switch]$Verb)
-
-	$amalgam = @()
-	$pages = 0
-
-	do {
-		$results = Invoke-RestMethod $Uri -Method "GET" -Headers $Headers
-
-		if ($results.value) { $amalgam += $results.value }
-		else { $amalgam += $results }
-
-		$pages += 1
-
-		if ($Verb) { Write-Host "Completed searching MSGraph page $pages ..." }	
-
-		$Uri = $results.'@odata.nextlink'	
-	} until (!($Uri))
-	
-	$amalgam
-}
-
 function Get-TimeStamp {
     
 	return "[{0:MM/dd/yy} {0:HH:mm:ss}]" -f (Get-Date)
