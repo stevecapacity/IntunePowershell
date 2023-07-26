@@ -1,16 +1,6 @@
 <# PRIMARY MIGRATION SCRIPT FOR INTUNE TENANT TO TENANT MIGRATION #>
 <# WARNING: THIS MUST BE RUN AS SYSTEM CONTEXT #>
-
-
-$ErrorActionPreference = 'SilentlyContinue'
-
-function Get-TimeStamp {
-    
-	return "[{0:MM/dd/yy} {0:HH:mm:ss}]" -f (Get-Date)
-    
-}
-
-<#PERMISSIONS NEEDED:
+<#APP REG PERMISSIONS NEEDED:
 Device.ReadWrite.All
 DeviceManagementApps.ReadWrite.All
 DeviceManagementConfiguration.ReadWrite.All
@@ -19,23 +9,54 @@ DeviceManagementManagedDevices.ReadWrite.All
 DeviceManagementServiceConfig.ReadWrite.All
 #>
 
-$resourcePath = "C:\Resources"
+$ErrorActionPreference = 'SilentlyContinue'
+
+<# =================================================================================================#>
+#### STEP 1: LOCAL FILES AND LOGGING ####
+<# =================================================================================================#>
+
+#Copy necessary files from intunewin package to local PC
+$resourcePath = "C:\ProgramData\IntuneMigration"
 
 if (!(Test-Path $resourcePath)) {
 	mkdir $resourcePath
 }
 
+$packageFiles = @(
+	"migrate.ppkg",
+	"AutopilotRegistration.xml",
+	"AutopilotRegistration.ps1",
+	"MigrateBitlockerKey.xml",
+	"MigrateBitlockerKey.ps1",
+	"SetPrimaryUser.xml",
+	"SetPrimaryUser.ps1",
+	"GroupTag.ps1",
+	"GroupTag.xml",
+	"MiddleBoot.ps1",
+	"MiddleBoot.xml",
+	"RestoreProfile.ps1",
+	"RestoreProfile.xml"
+)
+
+foreach ($file in $packageFiles) {
+	Copy-Item -Path "$($PSScriptRoot)\$($file)" -Destination "$($resourcePath)" -Force -Verbose
+}
+
+#Set detection flag for Intune install
+Set-Content -Path "$($resourcePath)\Installed.txt" -Value "Package Installed"
 
 #Start logging of script
-Start-Transcript -Path "C:\Resources\migration.log" -Verbose
+Start-Transcript -Path "$($resourcePath)\migration.log" -Verbose
 
-
+# Verify context is 
 Write-Host "Running user..."
 whoami
 Write-Host ""
 
-#<-------------------------------------------------------------------------------------------------------------------------------------------------->
-#<-------------------------------------------------------------------------------------------------------------------------------------------------->
+
+<# =================================================================================================#>
+#### STEP 2: AUTHENTICATE TO MS GRAPH ####
+<# =================================================================================================#>
 
 #SOURCE TENANT Application Registration Auth 
 Write-Host "Authenticating to MS Graph..."
@@ -60,9 +81,9 @@ $headers.Add("Authorization", $token)
 $headers.Add("Content-Type", "application/json")
 Write-Host "MS Graph Authenticated"
 
-#<-------------------------------------------------------------------------------------------------------------------------------------------------->
-#<-------------------------------------------------------------------------------------------------------------------------------------------------->
-
+<# =================================================================================================#>
+#### STEP 3: GET CURRENT STATE INFO ####
+<# =================================================================================================#>
 #Gather Autopilot and Intune Object details
 
 Write-Host "Gathering device info..."
@@ -70,7 +91,7 @@ $serialNumber = Get-WmiObject -Class Win32_Bios | Select-Object -ExpandProperty 
 Write-Host "Serial number is $($serialNumber)"
 
 $autopilotObject = Invoke-RestMethod -Method Get -uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities?`$filter=contains(serialNumber,'$($serialNumber)')" -headers $headers
-$intuneObject = Invoke-RestMethod -Method Get -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices?`$filter=contains(serialNumber,'$($serialNumber)')" -Headers $headers
+$intuneObject = Invoke-RestMethod -Method Get -uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices?`$filter=contains(serialNumber,'$($serialNumber)')" -headers $headers
 
 $autopilotID = $autopilotObject.value.id
 Write-Host "Autopilot ID is $($autopilotID)"
@@ -79,31 +100,29 @@ Write-Host "Intune ID is $($intuneID)"
 $groupTag = $autopilotObject.value.groupTag
 Write-Host "Current Autopilot GroupTag is $($groupTag)."
 
+<#===============================================================================================#>
+# Get active username
+$activeUsername = (Get-WMIObject Win32_ComputerSystem | Select-Object username).username
+$user = $activeUsername -replace '.*\\'
+Write-Host "Current active user is $($user)"
 
 Start-Sleep -Seconds 3
 
 <#===============================================================================================#>
+#Save device information to local XML
+$xmlString = "<Config>
+<GroupTag>$groupTag</GroupTag>
+<User>$user</User>
+</Config>"
 
-#Copy necessary files from intunewin package
-$files = @(
-	"migrate.ppkg",
-	"AutopilotRegistration.xml",
-	"AutopilotRegistration.ps1",
-	"MigrateBitlockerKey.xml",
-	"MigrateBitlockerKey.ps1",
-	"SetPrimaryUser.xml",
-	"SetPrimaryUser.ps1",
-	"GroupTag.ps1",
-	"GroupTag.xml",
-	"MiddleBoot.ps1",
-	"MiddleBoot.xml",
-	"RestoreProfile.ps1",
-	"RestoreProfile.xml"
-)
-foreach ($file in $files) {
-	Copy-Item -Path "$($PSScriptRoot)\$($file)" -Destination "$($resourcePath)" -Force -Verbose
-}
+New-Item -ItemType File -Path "$($resourcePath)" -Name "MEM_Settings.xml" -Force
+Add-Content $xmlPath $xmlString | Set-Content $xmlPath -Force
+Write-Host "Setting local content to $($xmlPath)"
 
+<# =================================================================================================#>
+#### STEP 4: SET REQUIRED POLICY ####
+<# =================================================================================================#>
+# Ensure Microsoft Account creation policy is enabled
 
 $regPath = "HKLM:\SOFTWARE\Microsoft\PolicyManager\current\device\Accounts"
 $regName = "AllowMicrosoftAccountConnection"
@@ -119,74 +138,80 @@ else {
 	reg.exe add "HKLM\SOFTWARE\Microsoft\PolicyManager\current\device\Accounts" /v "AllowMicrosoftAccountConnection" /t REG_DWORD /d 1 /f | Out-Host
 }
 
-<#===============================================================================================
-COPY LOCAL PROFILE TO PUBLIC TEMP
-===============================================================================================#>
-$activeUsername = (Get-WMIObject Win32_ComputerSystem | Select-Object username).username
-$user = $activeUsername -replace '.*\\'
-
-$publicTempLocalPath = "C:\Users\Public\Temp\Local"
-$publicTempRoamingPath = "C:\Users\Public\Temp\Roaming"
-$publicTempDesktopPath = "C:\Users\Public\Temp\Desktop"
-$publicTempDocumentsPath = "C:\Users\Public\Temp\Documents"
-$publicTempDownloadsPath = "C:\Users\Public\Temp\Downloads"
-
-if (!(Test-Path $publicTempLocalPath)) {
-	mkdir $publicTempLocalPath
+<#===============================================================================================#>
+# Only show OTHER USER option after reboot
+Write-Host "Turning off Last Signed-In User Display...."
+try {
+	Set-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System" -Name dontdisplaylastusername -Value 1 -Type DWORD -Force
+	Write-Host "Enabled Interactive Logon policy"
+} 
+catch {
+	Write-Host "Failed to enable policy"
 }
 
-if (!(Test-Path $publicTempRoamingPath)) {
-	mkdir $publicTempRoamingPath
+<# =================================================================================================#>
+#### STEP 5: USER DATA MIGRATION ####
+<# =================================================================================================#>
+
+# Check local user data size and available disk space
+$locations = @(
+	"AppData\Local"
+	"AppData\Roaming"
+	"Documents"
+	"Desktop"
+	"Pictures"
+)
+
+$totalProfileSize = 0
+
+foreach($location in $locations)
+{
+	$size = (Get-ChildItem "C:\Users\$($user)\$($location)" -Recurse | Measure-Object Length -Sum).sum
+	$totalProfileSize += $size
+	$sizeGB = "{0:N2} Gb" -f ($totalProfileSize/ 1Gb)
+	Write-Host "C:\Users\$($user)\$($location) size is $($sizeGB)"
 }
 
-if (!(Test-Path $publicTempDesktopPath)) {
-	mkdir $publicTempDesktopPath
-}
+$totalProfileSizeGB = "{0:N2} GB" -f ($totalProfileSize/ 1Gb)
+Write-Host "The size of $($user) user data is $($totalProfileSizeGB)."
 
-if (!(Test-Path $publicTempDocumentsPath)) {
-	mkdir $publicTempDocumentsPath
-}
+$diskSize = Get-Volume -DriveLetter C | Select-Object SizeRemaining -ExpandProperty SizeRemaining
+$diskSizeGB = "{0:N2} GB" -f ($diskSize/ 1Gb)
+Write-Host "There is $($diskSizeGB) of free space available on the PC."
 
-if (!(Test-Path $publicTempDownloadsPath)) {
-	mkdir $publicTempDownloadsPath
-}
-
-Write-Host "Starting file copy"
-
-$localAppDataPath = "C:\Users\$($user)\AppData\Local"
-$roamingAppDataPath = "C:\Users\$($user)\AppData\Roaming"
-$desktopPath = "C:\Users\$($user)\Desktop"
-$documentsPath = "C:\Users\$($user)\Documents"
-$downloadsPath = "C:\Users\$($user)\Documents"
-
-Write-Host "$(Get-TimeStamp) - Initiating Backup of Local App Data"
-robocopy $localAppDataPath $publicTempLocalPath /E /ZB /R:0 /W:0 /V /XJ /FFT
-Write-Host "$(Get-TimeStamp) - Initiating Backup of Roaming App Data"
-robocopy $roamingAppDataPath $publicTempRoamingPath /E /ZB /R:0 /W:0 /V /XJ /FFT
-Write-Host "$(Get-TimeStamp) - Initiating Backup of Desktop"
-robocopy $desktopPath $publicTempDesktopPath /E /ZB /R:0 /W:0 /V /XJ /FFT
-Write-Host "$(Get-TimeStamp) - Initiating Backup of Documents"
-robocopy $documentsPath $publicTempDocumentsPath /E /ZB /R:0 /W:0 /V /XJ /FFT
-Write-Host "$(Get-TimeStamp) - Initiating Backup of Downloads"
-robocopy $downloadsPath $publicTempDownloadsPath /E /ZB /R:0 /W:0 /V /XJ /FFT
-
-
-$xmlString = "<Config>
-<GroupTag>$groupTag</GroupTag>
-<User>$user</User>
-</Config>"
-
-#Save device information to local XML
-$xmlPath = "C:\Resources\MEM_Settings.xml"
-
-
-New-Item -ItemType File -Path "C:\Resources" -Name "MEM_Settings.xml" -Force
-Add-Content $xmlPath $xmlString | Set-Content $xmlPath -Force
-Write-Host "Setting local content..."
+$neededSpace = $totalProfileSize * 3
+$neededSpaceGB = "{0:N2} GB" -f ($neededSpace/ 1Gb)
+Write-Host "$($neededSpaceGB) is required to transfer local user data."
 
 <#===============================================================================================#>
+# If disk space available, tranfer data.
+
+if($diskSize -gt $neededSpace)
+{
+    Write-Host "$($diskSizeGB) of free space is sufficient to transfer $($totalProfileSizeGB) of local user data.  Begin transfer..." -ForegroundColor Green
+	
+	foreach($location in $locations)
+	{
+		$userPath = "C:\Users\$($user)\$($location)"
+		$publicPath = "C:\Users\Public\Temp\$($location)"
+		if(!(Test-Path))
+		{
+			mkdir $publicPath
+		}
+		Write-Host "Initiating backup of $($location)"
+		robocopy $userPath $publicPath /E /ZB /R:0 /W:0 /V /XJ /FFT
+	}
+}
+else
+{
+    Write-Host "$($diskSizeGB) is not sufficient to transfer $($totalProfileSizeGB) of local user data.  Consider backingup $($user) data to external storage." -ForegroundColor Red
+}
 
 
+
+<# =================================================================================================#>
+#### STEP 6: REMOVE PREVIOUS ENROLLMENT ARTIFICATS ####
+<# =================================================================================================#>
 #Remove previous MDM enrollment settings from registry
 
 Get-ChildItem 'Cert:\LocalMachine\My' | Where-Object { $_.Issuer -match "Microsoft Intune MDM Device CA" } | Remove-Item -Force
@@ -203,6 +228,8 @@ foreach ($enrollment in $Enrollments) {
 	}
 }
 
+<#===============================================================================================#>
+#Remove previous MDM enrollment tasks in task scheduler
 $enrollID = $enrollPath.Split('\')[-1]
 
 $taskPath = "\Microsoft\Windows\EnterpriseMgmt\$($enrollID)\"
@@ -223,46 +250,44 @@ else {
 
 Write-Host "Removed previous Intune enrollment"
 
+<# =================================================================================================#>
+#### STEP 7: LEAVE AZURE AD AND INTUNE ####
+<# =================================================================================================#>
 
-Set-Content -Path "$($resourcePath)\flag.txt" -Value "Installed"
+#Remove device from Current Azure AD and Intune environment
 
+Write-Host "Leaving the $($tenant) Azure AD and Intune environment"
+Start-Process "C:\Windows\sysnative\dsregcmd.exe" -ArgumentList "/leave"
 
-try
-{
-	Start-Process "C:\Windows\sysnative\dsregcmd.exe" -ArgumentList "/leave"
-}
-catch
-{
-	Start-Process "C:\Windows\System32\dsregcmd.exe" -ArgumentList "/leave"
-}
-
-Write-Host "Commands have run to attempt leave of Azure AD"
 Start-Sleep -Seconds 5
 
+<# =================================================================================================#>
+#### STEP 8: SET POST-MIGRATION TASKS ####
+<# =================================================================================================#>
 
-#Create tasks to update primary user, autopilot record, and bitlocker key in new tenant (post-migration)
+#Create post-migration tasks
 
-schtasks /create /TN "Set Primary Users" /xml "C:\Resources\SetPrimaryUser.xml" /f
-schtasks /create /TN "GroupTag" /xml "C:\Resources\GroupTag.xml" /f
-Write-Host "Set Primary User task is scheduled"
+foreach($file in $packageFiles)
+{
+    if($file -match '.xml')
+    {
+        $name = $file.Split('.')[0]
+        schtasks /create /TN $($name) /xml "$($resourcePath)\$($file)" /f
+		Write-Host "Created $($name) task"
+    }
+}
 
-schtasks /create /TN "Autopilot Registration" /xml "C:\Resources\AutopilotRegistration.xml" /f
-Write-Host "Autopilot registration to Tenerity task scheduled"
-
-schtasks /create /TN "Migrate Bitlocker Key" /xml "C:\Resources\MigrateBitlockerKey.xml" /f
-Write-Host "Bitlocker key escrow task scheduled"
-schtasks /create /TN "Run and Reboot" /xml "C:\Resources\MiddleBoot.xml" /f
-Write-Host "Middle boot task scheduled"
-
-schtasks /create /TN "Restore Profile" /xml "C:\Resources\RestoreProfile.xml" /f
-Write-Host "Profile restore task scheduled"
+<# =================================================================================================#>
+#### STEP 9: JOIN TENANT B ####
+<# =================================================================================================#>
 
 #Run ppkg to enroll into new tenant
+Write-Host "Installing provisioning package for new Azure AD tenant"
+Install-ProvisioningPackage -PackagePath "$($resourcePath)\migrate.ppkg" -QuietInstall -Force
 
-Install-ProvisioningPackage -PackagePath "C:\Resources\migrate.ppkg" -QuietInstall -Force
-
-
-
+<# =================================================================================================#>
+#### STEP 10: DELETE OBJECTS FROM TENANT A AND REBOOT ####
+<# =================================================================================================#>
 
 #Delete Intune and Autopilot objects from old tenant
 if ($intuneID -eq $null) {
@@ -272,7 +297,7 @@ else {
 	Write-Host "Attempting to Delete the Intune object..."
 	try {
 		Invoke-RestMethod -Method Delete -Uri "https://graph.microsoft.com/beta/deviceManagement/managedDevices/$($intuneID)" -Headers $headers
-		Start-Sleep -Seconds 5
+		Start-Sleep -Seconds 2
 		Write-Host "Intune object deleted."
 	}
  catch {
@@ -290,7 +315,7 @@ else {
 	Write-Host "Attempting to Delete the Autopilot object..."
 	try {
 		Invoke-RestMethod -Method Delete -Uri "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities/$($autopilotID)" -Headers $headers
-		Start-Sleep -Seconds 5
+		Start-Sleep -Seconds2
 		Write-Host "Autopilot object deleted."
 	}
  catch {
@@ -300,18 +325,8 @@ else {
 	}
 }
 
-
-
-# Only show OTHER USER option after reboot
-Write-Host "Turning off Last Signed-In User Display...."
-try {
-	Set-ItemProperty -Path "HKLM:Software\Microsoft\Windows\CurrentVersion\Policies\System" -Name dontdisplaylastusername -Value 1 -Type DWORD -Force
-	Write-Host "Enabled Interactive Logon GPO"
-} 
-catch {
-	Write-Host "Failed to enable GPO"
-}
-
+<#===============================================================================================#>
+# Reboot
 Shutdown -r -t 30
 
 Stop-Transcript
