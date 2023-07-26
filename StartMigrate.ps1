@@ -154,6 +154,7 @@ catch {
 <# =================================================================================================#>
 
 # Check local user data size and available disk space
+# Paths can be added or removed from this array as needed without affecting the migration.  Note that more paths will mean more files will mean larger data sizes...
 $locations = @(
 	"AppData\Local"
 	"AppData\Roaming"
