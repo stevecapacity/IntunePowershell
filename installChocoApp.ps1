@@ -15,7 +15,7 @@ function Install-ChocoPackage {
     # Check for Chocolatey and install
     $choco = "C:\ProgramData\chocolatey"
     Write-Host "Checking if Chocolatey is installed on $($env:COMPUTERNAME)..."
-    if(!(Test-Path))
+    if(!(Test-Path $choco))
     {
         Write-Host "Chocolatey was not found; installing..."
         Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')) | Out-Null
