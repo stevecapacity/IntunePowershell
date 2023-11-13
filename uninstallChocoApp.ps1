@@ -14,14 +14,16 @@ function Uninstall-ChocoPackage {
     if($installed -ne $null)
     {
         Write-Host "$($appName) is installed on $($env:COMPUTERNAME).  Uninstalling now..."
-        Start-Process -Wait -FilePath "C:\ProgramData\chocolatey\choco.exe" -ArgumentList "uninstall $($appPackage) -y"
+        Start-Process -Wait -FilePath "C:\ProgramData\chocolatey\choco.exe" -ArgumentList "uninstall $($appPackage) --force -y"
         Write-Host "$($appName) was successfully uninstalled."
     }
     else
     {
         Write-Host "$($appName) is not installed on $($env:COMPUTERNAME)."
     }
+    Stop-Transcript
 }
+
 
 $appName = ""
 $appPackage = ""
