@@ -40,6 +40,7 @@ function Install-ChocoPackage {
     {
         Write-Host "$($appName) is already installed."
     }
+    Stop-Transcript
 }
 # Name app
 $appName = ""
