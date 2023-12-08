@@ -1,5 +1,5 @@
 
-# TENANT B CREDENTIALS
+# TENANT A CREDENTIALS
 $clientId = "<CLIENTID>"
 $clientSecret = "<CLIENTSECRET>"
 $tenant = "<TENANTNAME>"
