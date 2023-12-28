@@ -36,7 +36,7 @@ else
     Write-Host "Chocolatey is installed."
 }
 
-$installed = choco list | Select-String $app
+$installed = Start-Process -Wait -FilePath "$($choco)\choco.exe" -ArgumentList "list" | Select-String $app
 $installFlag = "$($logPath)\$($app)_installed.txt"
 
 #Check for app and install
