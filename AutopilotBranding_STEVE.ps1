@@ -176,7 +176,6 @@ reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\EdgeUpdate" /v "CreateDesktopShort
 # STEP 16: Misc. features
 
 reg.exe load HKLM\TempUser "C:\Users\Default\NTUSER.DAT" | Out-Host
-reg.exe add "HKLM\TempUser\Software\Microsoft\Windows\CurrentVersion\Search" /v SearchboxTaskbarMode /t REG_DWORD /d 1 /f | Out-Host
 reg.exe add "HKLM\TempUser\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /v ShowTaskViewButton /t REG_DWORD /d 0 /f | Out-Host
 reg.exe add "HKLM\TempUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /V AutoCheckSelect /T REG_DWORD /D 0 /F | Out-Host
 reg.exe add "HKLM\TempUser\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" /V TaskbarAl /T REG_DWORD /D 0 /F | Out-Host
@@ -185,8 +184,10 @@ reg.exe unload HKLM\TempUser | Out-Host
 
 reg.exe add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v EnableFirstLogonAnimation /t REG_DWORD /d 0 /f /reg:64 | Out-Host
 
+reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /v SearchOnTaskbarMode /t REG_DWORD /d 1 /f | Out-Host
 
-# installs chocolatey
+# Chocolatey section- I use this personally, but it's not part of the default script.  Uncomment if you want to use it.
+<# installs chocolatey
 Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
 
 
@@ -204,7 +205,7 @@ $chocoApps = @(
 
 foreach ($app in $chocoApps){
     choco install $app -y
-}
+}#>
 
 Stop-Transcript
 
