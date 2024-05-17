@@ -1,0 +1,1 @@
+powershell.exe -executionpolicy bypass -file C:\Work\setup.ps1
