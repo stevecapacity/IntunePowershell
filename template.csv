@@ -1,2 +1,0 @@
-﻿SettingName,Category,Supported,Value,Minimum OS Version,Type,CSP
-SeSystemTimePrivilege,,Yes,"[""BUILTIN\\Administrators"",""NT AUTHORITY\\LOCAL SERVICE""]",17130,Policy,./Device/Vendor/MSFT/Policy/Config/UserRights/ChangeSystemTime
