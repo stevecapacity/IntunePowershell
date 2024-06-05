@@ -1,7 +1,7 @@
 [cmdletbinding()]
 
 param(
-    [string]$WebhookData
+    [object]$WebhookData
 )
 
 ## WebhookData
