@@ -1,0 +1,1 @@
+"$($PSScriptRoot)\teamsbootstrapper.exe -x"
