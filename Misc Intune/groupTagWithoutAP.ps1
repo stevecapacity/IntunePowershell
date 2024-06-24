@@ -3,7 +3,7 @@
 $clientID = "YOUR_CLIENT_ID"
 $groupTag = "YOUR_GROUP_TAG"
 $clientSecret = "YOUR_CLIENT SECRET"
-$tenantName = "YOUR_TENANT_NAME.COM"
+$tenant = "YOUR_TENANT_NAME.COM"
 
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
 $headers.Add("Content-Type", "application/x-www-form-urlencoded")
