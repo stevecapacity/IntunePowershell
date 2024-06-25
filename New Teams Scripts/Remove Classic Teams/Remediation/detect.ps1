@@ -8,7 +8,7 @@ $classicTeams = Get-ItemProperty -Path $registryPath | Where-Object {$_.DisplayN
 if($classicTeams)
 {
     # trigger remediation
-    Write-Output "Classic Teams found; attempting install"
+    Write-Output "Classic Teams found; attempting uninstall"
     Exit 1
 }
 else
