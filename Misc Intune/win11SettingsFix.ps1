@@ -17,3 +17,5 @@ reg.exe add "$($userRegPath)\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
 reg.exe add "HKLM\SOFTWARE\Policies\Microsoft\Windows\Windows Search" /v "SearchOnTaskbarMode" /t REG_DWORD /d 1 /f | Out-Host
 
 New-Item -Path "C:\ProgramData\Microsoft\win11Settings.tag" -ItemType File -Force
+
+Stop-Process -Name explorer -Force
