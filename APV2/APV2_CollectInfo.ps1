@@ -2,8 +2,8 @@
 $webhook = "WEBHOOK URL GOES HERE"
 
 # Get the computer system and BIOS information
-$computerSystem = Get-WmiObject -Class Win32_ComputerSystem
-$bios = Get-WmiObject -Class Win32_BIOS
+$computerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
+$bios = Get-CimInstance -ClassName Win32_BIOS
 
 # Create the JSON payload
 $webhookData = @{
