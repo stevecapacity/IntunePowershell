@@ -15,7 +15,7 @@ $requiredModules = @(
     "Microsoft.Graph.Identity.DirectoryManagement",
     "Microsoft.Graph.Identity.SignIns",
     "Microsoft.Graph.Governance",
-    "Microsoft.Graph..Applications"
+    "Microsoft.Graph.Applications"
 )
 
 foreach($module in $requiredModules)
