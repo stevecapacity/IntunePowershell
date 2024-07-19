@@ -1,26 +1,27 @@
-#Get the Username of the User executing the Script
+# Remediate CrowdStrike driver file on a system
+# Thanks to Daniel Bleyer (https://www.linkedin.com/in/danielbleyer-uk/) for contributing the original version of this script
 
-$user = (Get-WmiObject -Class Win32_ComputerSystem | Select-Object Username).Username
+#Define the CrowdStrike Driver Folder
 
- #Get the User Executing the Script in NTAccount Security Principal Format
+$driverFolder = "C:\Windows\System32\drivers\CrowdStrike"
 
-$identityReference = [System.Security.Principal.NTAccount]::new($user)
-
- #Define the CrowdStrike Driver Folder
-
-[string]$driverFolder = "C:\Windows\System32\drivers\CrowdStrike"
-
- If (Test-Path $driverFolder) 
+ if(Test-Path $driverFolder) 
  {
-
     $files = Get-ChildItem -Path $driverFolder -Recurse -Filter "*CD-00000291*.sys" 
     foreach($file in $files)
     {
-        $acl = $file.FullName | Get-Acl
-        $acl.SetOwner($identityReference)
-        $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$identityReference","FullControl","ContainerInherit,ObjectInherit","None" ,"Allow")
-        $acl.SetAccessRule($AccessRule)
-        Set-Acl -Path $file.FullName -AclObject $acl
-        Remove-Item -Path $file.FullName -Force
+        # get last write time
+        $UTCwriteTime = $file.LastWriteTimeUtc
+
+        # Check last LastWriteTimeUTC matches issue
+        if($UTCwriteTime.Hour -eq 4 -and $UTCwriteTime.minute -eq 9)
+        {
+            Write-Output "CrowdStrike file found, removing..."
+            Remove-Item -Path $file.FullName -Force
+        }
+        else
+        {
+            Write-Output "CrowdStrike file found, but not the problem version, nothing to do."
+        }        
     }
 }
