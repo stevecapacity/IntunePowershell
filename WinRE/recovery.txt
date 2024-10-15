@@ -1,0 +1,6 @@
+select volume c
+shrink desired=665 minimum=650
+create partition primary size=665 id=de94bba4-06d1-4d40-a16a-bfd50179d6ac
+format fs=ntfs quick label=WinRE
+assign letter=z
+gpt attributes=0x8000000000000001
