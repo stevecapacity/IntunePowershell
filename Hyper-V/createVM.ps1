@@ -84,8 +84,8 @@ log "Temporarily setting VM name to $VMName"
 log "Copying the $version disk from $templates..."
 try
 {
-    Copy-Item -Path "$($tempaltes)\GM-$($version).vhdx" -Destination "$($virtualHardDisks)\$($VMName).vhdx" -Force | Out-Null
-    log "Disk coppied to $virtualHardDisks"
+    Copy-Item -Path "$($templates)\GM-$($version).vhdx" -Destination "$($virtualHardDisks)\$($VMName).vhdx" -Force | Out-Null
+    log "Disk copied to $virtualHardDisks"
 }
 catch
 {
@@ -123,7 +123,7 @@ log "New VM Name will be $newName"
 
 try 
 {
-    Renamve-VM -Name $VMName -NewName $newVMName
+    Rename-VM -Name $VMName -NewName $newVMName
     log "VM renamed to $newVMName"    
 }
 catch 
