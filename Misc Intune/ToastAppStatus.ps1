@@ -57,9 +57,9 @@ function msGraphAuthenticate()
 {
     [CmdletBinding()]
     Param(
-        [string]$clientId = "fd6d476f-f94d-4c35-a1ed-efc5f704f44a",
-        [string]$clientSecret = "1t38Q~c5z1yDMBXkriBgh4HQZunz7mQWePx2rdpd",
-        [string]$tenantName = "rubixdev.com"
+        [string]$clientId = "<client_id>",
+        [string]$clientSecret = "<client_secret>",
+        [string]$tenantName = "<tenant_name>"
     )
     $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
     $headers.Add("Content-Type", "application/x-www-form-urlencoded")
