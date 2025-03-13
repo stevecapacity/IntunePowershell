@@ -20,10 +20,10 @@ Start-Transcript -Path $LogFile -Append -Verbose
 log "Starting w365BACKUP script..."
 
 # DEFINE AZURE SHARE DETAILS
-$StorageAccountName = "rubixcloudpc"
-$StorageAccountKey = "Ltm04ZwBSkJX+NnnSBajfk5YEQZEY3oLUYLCzxd2OoFTT7irZ0kp8p7/C0xm5VDP7sn7hb9oO8q7+AStcEPdvg=="
-$SASToken = "sv=2022-11-02&ss=bfqt&srt=sco&sp=rwdlacupiytfx&se=2026-03-12T02:31:50Z&st=2025-03-11T18:31:50Z&spr=https&sig=ltS%2Bds%2BYh%2BAkZUzH8XDH3c2JKC%2F5qh%2BZHGBRRoK0YXs%3D"
-$FileShare = "w365"
+$StorageAccountName = "<STORAGE ACCOUNT NAME>"
+$StorageAccountKey = "<STORAGE ACCOUNT KEY>"
+$SASToken = "<SAS TOKEN>"
+$FileShare = "<FILESHARE NAME>"
 
 # GET CURRENT USER SID (AS SYSTEM)
 $CurrentUser = (Get-CimInstance -ClassName Win32_ComputerSystem | Select-Object UserName).UserName
