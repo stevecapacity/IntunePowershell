@@ -1,0 +1,33 @@
+{
+    "Rules":[
+        {
+            "SettingName": "ChromeInstalled",
+            "Operator" : "IsEquals",
+            "DataType" : "Boolean",
+            "Operand" : true,
+            "MoreInfoURL": "https://getrubix.com",
+            "RemediationStrings":[
+                {
+                    "Language":"en_US",
+                    "Title": "Google Chrome Required",
+                    "Description" : "This PC must have Google Chrome installed to be compliant."
+                }
+            ]
+        },
+        {
+            "SettingName": "DisableConsumerFeatures",
+            "Operator" : "IsEquals",
+            "DataType" : "String",
+            "Operand" : "1",
+            "MoreInfoURL": "https://getrubix.com",
+            "RemediationStrings":[
+                {
+                    "Language":"en_US",
+                    "Title": "Disable Windodws Consumer Features",
+                    "Description" : "Your organization requires Windows consumer features to be disabled."
+                }
+            ]
+            
+        }   
+    ]
+}

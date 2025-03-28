@@ -1,4 +1,4 @@
- #Script written by Jesse Weimer and Logan Lautt - GetRubix
+
 
 <#NOTES:
 This script has been compiled over time based on various reporting needs for Intune-managed devices - 
