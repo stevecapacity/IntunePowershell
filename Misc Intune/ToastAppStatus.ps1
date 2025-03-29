@@ -85,152 +85,201 @@ $Headers = msGraphAuthenticate
 $GraphAPIBase = "https://graph.microsoft.com/beta"
 
 ### Get assigned apps through registry
-function Get-IntuneAppStatus()
+
+[string]$Win32RegPath = "HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps"
+[string]$GraphAPIBase = "https://graph.microsoft.com/beta"
+    
+
+$AppStatusList = @()
+
+if(Test-Path $Win32RegPath)
 {
-    Param(
-        [string]$Win32RegPath = "HKLM:\SOFTWARE\Microsoft\IntuneManagementExtension\Win32Apps"
-    )
+    $AppGUIDs = Get-ChildItem -Path $Win32RegPath | Select-Object -ExpandProperty PSChildName | Where-Object { $_ -match "^[0-9a-fA-F\-]{36}$" }
 
-    $AppStatusList = @()
-
-    if(Test-Path $Win32RegPath)
+    foreach ($AppGUID in $APPGUIDs)
     {
-        $AppGUIDs = Get-ChildItem -Path $Win32RegPath | Select-Object -ExpandProperty PSChildName | Where-Object { $_ -match "^[0-9a-fA-F\-]{36}$" }
+        $AppGUIDPath = "$($Win32RegPath)\$($AppGUID)"
 
-        foreach ($AppGUID in $APPGUIDs)
+        if(Test-Path $AppGUIDPath)
         {
-            $AppGUIDPath = "$($Win32RegPath)\$($AppGUID)"
+            $ParentSubKeys = Get-ChildItem -Path $AppGUIDPath | Select-Object -ExpandProperty PSChildName -ErrorAction SilentlyContinue
 
-            if(Test-Path $AppGUIDPath)
+            if($ParentSubKeys)
             {
-                $ParentSubKeys = Get-ChildItem -Path $AppGUIDPath | Select-Object -ExpandProperty PSChildName -ErrorAction SilentlyContinue
+                $SubKeys = $ParentSubKeys | Where-Object { $_ -match "^[0-9a-fA-F\-]{36}" }
 
-                if($ParentSubKeys)
+                if ($SubKeys)
                 {
-                    $SubKeys = $ParentSubKeys | Where-Object { $_ -match "^[0-9a-fA-F\-]{36}" }
-
-                    if ($SubKeys)
+                    foreach($SubKey in $SubKeys)
                     {
-                        foreach($SubKey in $SubKeys)
+                        if($SubKey -match "^(.*)_1$")
                         {
-                            if($SubKey -match "^(.*)_1$")
-                            {
-                                $SubKey = $matches[1]
-                            }
-                            else
-                            {
-                                $SubKey = $SubKey
-                            }
-                            $RegPath = "$($AppGUIDPath)\$($SubKey)_1\EnforcementStateMessage"
-                            $RegValue = "EnforcementStateMessage"
+                            $SubKey = $matches[1]
+                        }
+                        else
+                        {
+                            $SubKey = $SubKey
+                        }
+                        $RegPath = "$($AppGUIDPath)\$($SubKey)_1\EnforcementStateMessage"
+                        $RegValue = "EnforcementStateMessage"
 
-                            if(Test-Path $RegPath)
+                        if(Test-Path $RegPath)
+                        {
+                            try
                             {
-                                try
+                                $EnforcementStateMessage = Get-ItemProperty -Path $RegPath -Name $RegValue | Select-Object -ExpandProperty $RegValue
+                                $EnforcementStateMessage = $EnforcementStateMessage.Trim()
+
+                                if($EnforcementStateMessage -match "^\{")
                                 {
-                                    $EnforcementStateMessage = Get-ItemProperty -Path $RegPath -Name $RegValue | Select-Object -ExpandProperty $RegValue
-                                    $EnforcementStateMessage = $EnforcementStateMessage.Trim()
-
-                                    if($EnforcementStateMessage -match "^\{")
+                                    try
                                     {
-                                        try
-                                        {
-                                            $EnforcementStateObject = $EnforcementStateMessage | ConvertFrom-Json
-                                            $EnforcementState = $EnforcementStateObject.EnforcementState                                            
-                                           
-                                        }
-                                        catch
-                                        {
-                                            log "Error parsing JSON: $_"
-                                        }
+                                        $EnforcementStateObject = $EnforcementStateMessage | ConvertFrom-Json
+                                        $EnforcementState = $EnforcementStateObject.EnforcementState                                            
+                                        
                                     }
-                                    else
+                                    catch
                                     {
-                                        log "Error: EnforcementStateMessage is not in JSON format"
-                                    }
-
-
-                                    $GraphUri = "$($GraphAPIBase)/deviceAppManagement/mobileApps/$($SubKey)"
-                                    $AppDisplayName = (Invoke-RestMethod -Method Get -Uri $GraphUri -Headers $Headers).DisplayName
-
-                                    $AppStatusList += [PSCustomObject]@{
-                                        DisplayName = $AppDisplayName
-                                        AppId = $SubKey
-                                        EnforcementState = $EnforcementState
+                                        log "Error parsing JSON: $_"
                                     }
                                 }
-                                catch
+                                else
                                 {
-                                    log "Error retrieving EnforcementState for App GUID: $($SubKey) - $_"
+                                    log "Error: EnforcementStateMessage is not in JSON format"
+                                }
+
+
+                                $GraphUri = "$($GraphAPIBase)/deviceAppManagement/mobileApps/$($SubKey)"
+                                $AppDisplayName = (Invoke-RestMethod -Method Get -Uri $GraphUri -Headers $Headers).DisplayName
+
+                                $AppStatusList += [PSCustomObject]@{
+                                    DisplayName = $AppDisplayName
+                                    AppId = $SubKey
+                                    EnforcementState = $EnforcementState
                                 }
                             }
-                            else
+                            catch
                             {
-                                log "Registry key not found: $RegPath"
+                                log "Error retrieving EnforcementState for App GUID: $($SubKey) - $_"
                             }
                         }
-                    }
-                    else
-                    {
-                        log "No valid subkeys found under: $AppGUIDPath"
+                        else
+                        {
+                            log "Registry key not found: $RegPath"
+                        }
                     }
                 }
                 else
                 {
-                    log "No subkeys found for App GUID: $AppGUID"
+                    log "No valid subkeys found under: $AppGUIDPath"
                 }
             }
             else
             {
-                log "Registry path does not exist: $AppGUIDPath"
+                log "No subkeys found for App GUID: $AppGUID"
             }
         }
-        
+        else
+        {
+            log "Registry path does not exist: $AppGUIDPath"
+        }
     }
-    else
-    {
-        log "Registry path not found: $Win32RegPath"
-    }
-    Return $AppStatusList
+    
 }
+else
+{
+    log "Registry path not found: $Win32RegPath"
+}
+
+
+# Check if AppStatus returned value
+if($null -eq $AppStatusList)
+{
+    log "No applications found.  Exiting..."
+    # Kill task
+    Exit 0
+}
+else
+{
+    $AppJson = $AppStatusList | ConvertTo-Json -Compress
+    log "App status found.  Converting to JSON"
+}
+
+# Get current user SID
+$CurrentUser = (Get-CimInstance -Class Win32_ComputerSystem | Select-Object UserName).UserName
+$SID = (New-Object System.Security.Principal.NTAccount($user)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+
+# Create a new registry key for the current user
+New-PSDrive -Name HKU -PSProvider Registry -Root HKEY_USERS
+$UserRegPath = "HKU\$($SID)\SOFTWARE\AppToast"
+New-Item -Path $UserRegPath -Force
+New-ItemProperty -Path $UserRegPath -Name "AppStatus" -Value $AppJson -Force
+
 
 # Function to display toast notification with BurntToast
 function Show-ToastNotification()
 {
-    param(
-        [string]$AppName,
-        [string]$Status
-    )
+    $Apps = (Get-ItemProperty -Path "HKCU:\SOFTWARE\AppToast" -Name "AppStatus").AppStatus | ConvertFrom-Json
+
+    # Build toast message
+    $ToastTitle = "Intune App Installation Status"
+    $ToastBody = foreach($App in $Apps)
+    {
+        $AppName = $App.DisplayName
+        $Status = switch ($App.EnforcementState)
+        {
+            "1000" { "Installed" }
+            "5000" { "Failed" }
+            "2000" { "Pending" }
+            default { "Unknown" }
+        }
+        "$AppName - $Status"
+    } -join "`n"
+
+    # Assemble Toast block
     $ToastScriptBlock = {
-        $ToastTitle = "Intune App Install Status"
-        $ToastMessage = "$AppName - Status: $Status"
+        param($ToastBody)
+
+        Import-Module BurntToast -ErrorAction SilentlyContinue
         
-        New-BurntToastNotification -AppLogo "C:\Windows\System32\shell32.dll" -Text $ToastMessage -Title $ToastTitle
+        $Text1 = New-BTHeader -Content $ToastTitle
+        $Text2 = New-BTText -Content $ToastBody
+        $Binding = New-BTBinding -Children $Text1, $Text2
+        $Visual = New-BTVisual -BindingGeneric $Binding
+        $Content = New-BTContent -Visual $Visual
+
+        Submit-BTNotification
+        # Show toast notification
+        New-BurntToastNotification -Content $Content -Silent
     }
-    
-    Invoke-AsCurrentUser -ScriptBlock @ToastScriptBlock -UseWindowsPowerShell
+    Invoke-AsCurrentUser -ScriptBlock $ToastScriptBlock -UseWindowsPowerShell $true
 }
 
-while($true)
+
+# Check AppStatusList for any App that does not have an enforcement state of 1000.  If an app does not have 1000, trigger the Show-ToastNotification function and keep running every minute for up to ten minutes until all apps have an enforcement state of 1000.
+$AppStatusList = $AppStatusList | Where-Object { $_.EnforcementState -ne "1000" }
+$AppStatusListCount = $AppStatusList.Count
+$MaxWaitTime = 10
+$WaitTime = 0
+$Interval = 60
+$StartTime = Get-Date
+$EndTime = $StartTime.AddMinutes($MaxWaitTime)
+
+# Show initial toast
+Show-ToastNotification
+
+# Loop until all apps have an enforcement state of 1000 or the max wait time is reached
+while ($AppStatusListCount -gt 0 -and (Get-Date) -lt $EndTime)
 {
-    Clear-Host
-    log "Checking Intune App Installation Status"
+    Start-Sleep -Seconds $Interval
+    $AppStatusList = Get-ItemProperty -Path "HKCU:\SOFTWARE\AppToast" -Name "AppStatus" | ConvertFrom-Json
+    $AppStatusListCount = $AppStatusList.Count
 
-    $AppStatus = Get-IntuneAppStatus
-    $AppStatus | Format-Table DisplayName, EnforcementState -AutoSize
-    foreach ($App in $AppStatus)
+    # Check if all apps have an enforcement state of 1000
+    if ($AppStatusListCount -eq 0)
     {
-        Show-ToastNotification -AppName $App.DisplayName -Status $App.EnforcementState
-    }
-
-    $PendingApps = $AppStatus | Where-Object { $_.EnforcementState -ne "1000" -and $_.EnforcementState -match "500*" }
-
-    if($PendingApps.Count -eq 0)
-    {
-        log "`nAll apps have been installed or failed.  Stop monitoring."
+        # All apps have an enforcement state of 1000, exit loop
         break
     }
-
-    log "`nWaiting for 1 minutes to check again ..."
-    Start-Sleep -Seconds 60
 }
+
