@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-Display toast notification after Autopilot provisioning to keep users informed of apps and policy being applied from Intune.
+Display Window to keep users informed of apps and policy being applied from Intune.
 
 .DESCRIPTION
-This script is designed to be run as a scheduled task after Autopilot provisioning to keep users informed of apps and policy being applied from Intune. The script will check for assigned applications and MDM policies and display a toast notification if any issues are found.
+This script is designed to be run as a scheduled task after Autopilot provisioning to keep users informed of apps and policy being applied from Intune. The script will check for assigned applications and display a pop up Window showing status.
 
 .PARAMETER message
 Microsoft Graph API client ID, client secret, and tenant name.
@@ -28,29 +28,6 @@ function log {
     $message = "$time - $message"
     Write-Output $message
 }
-
-# Check for nuget package provider
-if (-not (Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) 
-{
-    Install-PackageProvider -Name NuGet -Force -Confirm:$false
-}
-
-# Install modules if not already installed
-$modules = @(
-    "BurntToast",
-    "RunAsUser"
-)
-
-foreach ($module in $modules) 
-{
-    if (-not (Get-Module -Name $module -ListAvailable)) 
-    {
-        Install-Module -Name $module -Force -AllowClobber
-    }
-    Import-Module $module
-}
-
-
 
 # Graph authenticate function
 function msGraphAuthenticate()
@@ -199,87 +176,3 @@ if($null -eq $AppStatusList)
     # Kill task
     Exit 0
 }
-else
-{
-    $AppJson = $AppStatusList | ConvertTo-Json -Compress
-    log "App status found.  Converting to JSON"
-}
-
-# Get current user SID
-$CurrentUser = (Get-CimInstance -Class Win32_ComputerSystem | Select-Object UserName).UserName
-$SID = (New-Object System.Security.Principal.NTAccount($user)).Translate([System.Security.Principal.SecurityIdentifier]).Value
-
-# Create a new registry key for the current user
-New-PSDrive -Name HKU -PSProvider Registry -Root HKEY_USERS
-$UserRegPath = "HKU\$($SID)\SOFTWARE\AppToast"
-New-Item -Path $UserRegPath -Force
-New-ItemProperty -Path $UserRegPath -Name "AppStatus" -Value $AppJson -Force
-
-
-# Function to display toast notification with BurntToast
-function Show-ToastNotification()
-{
-    $Apps = (Get-ItemProperty -Path "HKCU:\SOFTWARE\AppToast" -Name "AppStatus").AppStatus | ConvertFrom-Json
-
-    # Build toast message
-    $ToastTitle = "Intune App Installation Status"
-    $ToastBody = foreach($App in $Apps)
-    {
-        $AppName = $App.DisplayName
-        $Status = switch ($App.EnforcementState)
-        {
-            "1000" { "Installed" }
-            "5000" { "Failed" }
-            "2000" { "Pending" }
-            default { "Unknown" }
-        }
-        "$AppName - $Status"
-    } -join "`n"
-
-    # Assemble Toast block
-    $ToastScriptBlock = {
-        param($ToastBody)
-
-        Import-Module BurntToast -ErrorAction SilentlyContinue
-        
-        $Text1 = New-BTHeader -Content $ToastTitle
-        $Text2 = New-BTText -Content $ToastBody
-        $Binding = New-BTBinding -Children $Text1, $Text2
-        $Visual = New-BTVisual -BindingGeneric $Binding
-        $Content = New-BTContent -Visual $Visual
-
-        Submit-BTNotification
-        # Show toast notification
-        New-BurntToastNotification -Content $Content -Silent
-    }
-    Invoke-AsCurrentUser -ScriptBlock $ToastScriptBlock -UseWindowsPowerShell $true
-}
-
-
-# Check AppStatusList for any App that does not have an enforcement state of 1000.  If an app does not have 1000, trigger the Show-ToastNotification function and keep running every minute for up to ten minutes until all apps have an enforcement state of 1000.
-$AppStatusList = $AppStatusList | Where-Object { $_.EnforcementState -ne "1000" }
-$AppStatusListCount = $AppStatusList.Count
-$MaxWaitTime = 10
-$WaitTime = 0
-$Interval = 60
-$StartTime = Get-Date
-$EndTime = $StartTime.AddMinutes($MaxWaitTime)
-
-# Show initial toast
-Show-ToastNotification
-
-# Loop until all apps have an enforcement state of 1000 or the max wait time is reached
-while ($AppStatusListCount -gt 0 -and (Get-Date) -lt $EndTime)
-{
-    Start-Sleep -Seconds $Interval
-    $AppStatusList = Get-ItemProperty -Path "HKCU:\SOFTWARE\AppToast" -Name "AppStatus" | ConvertFrom-Json
-    $AppStatusListCount = $AppStatusList.Count
-
-    # Check if all apps have an enforcement state of 1000
-    if ($AppStatusListCount -eq 0)
-    {
-        # All apps have an enforcement state of 1000, exit loop
-        break
-    }
-}
-
