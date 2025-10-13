@@ -1,0 +1,32 @@
+# Authenticate
+Connect-MgGraph
+
+# Get all Autopilot devices
+$url = "https://graph.microsoft.com/beta/deviceManagement/windowsAutopilotDeviceIdentities"
+$autopilotDevices = @()
+
+do {
+    $response = Invoke-MgGraphRequest -Method GET -Uri $url
+    $autopilotDevices += $response.value
+    $url = $response."@odata.nextLink"
+} while ($url)
+
+foreach ($device in $autopilotDevices) {
+    $serial         = $device.serialNumber
+    $manufacturer   = $device.manufacturer
+    $model          = $device.model
+
+    $params = @{
+        overwriteImportedDeviceIdentities = $false
+        importedDeviceIdentities = @(
+            @{
+                importedDeviceIdentityType = "manufacturerModelSerial";
+                importedDeviceIdentifier = "$($manufacturer),$($model),$($serial)"
+            }
+        )
+    } | ConvertTo-Json
+
+    Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/beta/deviceManagement/importedDeviceIdentities/importDeviceIdentityList" -Body $params
+}
+
+
