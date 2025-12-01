@@ -3,7 +3,7 @@
  $clientSecret = "<CLIENT_SECRET>"
  $tenantId = "<TEANANT_ID>"
  
- $tokenEndpoint = "https://login.microsoftonline.com/$tenantId/oath2/v2.0/token"
+ $tokenEndpoint = "https://login.microsoftonline.com/$tenantId/oauth2/v2.0/token"
  $tokenRequestBody = @{
      client_id = $clientId
      client_secret = $clientSecret
