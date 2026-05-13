@@ -1,0 +1,116 @@
+<AppLockerPolicy Version="1">
+<!-- EXE -->
+  <RuleCollection Type="Exe" EnforcementMode="Enabled">
+    <FilePathRule Id="921cc481-6e17-4653-8f75-050b80acca20"
+        Name="(Default Rule) All files located in the Program Files folder"
+        Description="Allows members of the Everyone group to run applications that are located in the Program Files folder."
+        UserOrGroupSid="S-1-1-0" Action="Allow">
+      <Conditions><FilePathCondition Path="%PROGRAMFILES%\*" /></Conditions>
+    </FilePathRule>
+    <FilePathRule Id="a61c8b2c-a319-4cd0-9690-d2177cad7b51"
+        Name="(Default Rule) All files located in the Windows folder"
+        Description="Allows members of the Everyone group to run applications that are located in the Windows folder."
+        UserOrGroupSid="S-1-1-0" Action="Allow">
+      <Conditions><FilePathCondition Path="%WINDIR%\*" /></Conditions>
+    </FilePathRule>
+    <FilePathRule Id="fd686d83-a829-4351-8ff4-27c7de5755d2"
+        Name="(Default Rule) All files"
+        Description="Allows members of the local Administrators group to run all applications."
+        UserOrGroupSid="S-1-5-32-544" Action="Allow">
+      <Conditions><FilePathCondition Path="*" /></Conditions>
+    </FilePathRule>
+  </RuleCollection>
+
+  <!-- MSI -->
+    <RuleCollection Type="Exe" EnforcementMode="Enabled">
+    <FilePathRule Id="921cc481-6e17-4653-8f75-050b80acca20"
+        Name="(Default Rule) All files located in the Program Files folder"
+        Description="Allows members of the Everyone group to run applications that are located in the Program Files folder."
+        UserOrGroupSid="S-1-1-0" Action="Allow">
+      <Conditions><FilePathCondition Path="%PROGRAMFILES%\*" /></Conditions>
+    </FilePathRule>
+    <FilePathRule Id="a61c8b2c-a319-4cd0-9690-d2177cad7b51"
+        Name="(Default Rule) All files located in the Windows folder"
+        Description="Allows members of the Everyone group to run applications that are located in the Windows folder."
+        UserOrGroupSid="S-1-1-0" Action="Allow">
+      <Conditions><FilePathCondition Path="%WINDIR%\*" /></Conditions>
+    </FilePathRule>
+    <FilePathRule Id="fd686d83-a829-4351-8ff4-27c7de5755d2"
+        Name="(Default Rule) All files"
+        Description="Allows members of the local Administrators group to run all applications."
+        UserOrGroupSid="S-1-5-32-544" Action="Allow">
+      <Conditions><FilePathCondition Path="*" /></Conditions>
+    </FilePathRule>
+  </RuleCollection>
+
+<!-- Script -->
+  <RuleCollection Type="Exe" EnforcementMode="Enabled">
+    <FilePathRule Id="921cc481-6e17-4653-8f75-050b80acca20"
+        Name="(Default Rule) All files located in the Program Files folder"
+        Description="Allows members of the Everyone group to run applications that are located in the Program Files folder."
+        UserOrGroupSid="S-1-1-0" Action="Allow">
+      <Conditions><FilePathCondition Path="%PROGRAMFILES%\*" /></Conditions>
+    </FilePathRule>
+    <FilePathRule Id="a61c8b2c-a319-4cd0-9690-d2177cad7b51"
+        Name="(Default Rule) All files located in the Windows folder"
+        Description="Allows members of the Everyone group to run applications that are located in the Windows folder."
+        UserOrGroupSid="S-1-1-0" Action="Allow">
+      <Conditions><FilePathCondition Path="%WINDIR%\*" /></Conditions>
+    </FilePathRule>
+    <FilePathRule Id="fd686d83-a829-4351-8ff4-27c7de5755d2"
+        Name="(Default Rule) All files"
+        Description="Allows members of the local Administrators group to run all applications."
+        UserOrGroupSid="S-1-5-32-544" Action="Allow">
+      <Conditions><FilePathCondition Path="*" /></Conditions>
+    </FilePathRule>
+  </RuleCollection>
+
+<!-- DLL -->
+  <RuleCollection Type="Exe" EnforcementMode="Enabled">
+    <FilePathRule Id="921cc481-6e17-4653-8f75-050b80acca20"
+        Name="(Default Rule) All files located in the Program Files folder"
+        Description="Allows members of the Everyone group to run applications that are located in the Program Files folder."
+        UserOrGroupSid="S-1-1-0" Action="Allow">
+      <Conditions><FilePathCondition Path="%PROGRAMFILES%\*" /></Conditions>
+    </FilePathRule>
+    <FilePathRule Id="a61c8b2c-a319-4cd0-9690-d2177cad7b51"
+        Name="(Default Rule) All files located in the Windows folder"
+        Description="Allows members of the Everyone group to run applications that are located in the Windows folder."
+        UserOrGroupSid="S-1-1-0" Action="Allow">
+      <Conditions><FilePathCondition Path="%WINDIR%\*" /></Conditions>
+    </FilePathRule>
+    <FilePathRule Id="fd686d83-a829-4351-8ff4-27c7de5755d2"
+        Name="(Default Rule) All files"
+        Description="Allows members of the local Administrators group to run all applications."
+        UserOrGroupSid="S-1-5-32-544" Action="Allow">
+      <Conditions><FilePathCondition Path="*" /></Conditions>
+    </FilePathRule>
+  </RuleCollection>
+
+  <!-- Packaged app rules (Copilot block)-->
+  <RuleCollection Type="Appx" EnforcementMode="Enabled">
+    <FilePublisherRule Id="b1d1e3f4-1a2b-4c5d-9e8f-7a6b5c4d3e2f"
+        Name="Block - Microsoft Copilot"
+        Description="Prevents standalone copilot app from launching"
+        UserOrGroupSid="S-1-1-0" Action="Deny">
+        <Conditions>
+            <FilePublisherCondition 
+                PublisherName="CN=Microsoft Corporation, O=Microsoft Corporation, L=Redmond, S=Washington, C=US"
+                ProductName="Microsoft.Copilot" BinaryName="*">
+                <BinaryVersionRange LowSection="*" HighSection="*" />
+            </FilePublisherCondition>
+        </Conditions>
+    </FilePublisherRule>
+     <FilePublisherRule Id="a9e18c21-ff8f-43cf-b9fc-db40eed693ba"
+        Name="(Default Rule) All signed packaged apps"
+        Description="Allows members of the Everyone group to run packaged apps that are signed."
+        UserOrGroupSid="S-1-1-0" Action="Allow">
+      <Conditions>
+        <FilePublisherCondition PublisherName="*" ProductName="*" BinaryName="*">
+          <BinaryVersionRange LowSection="0.0.0.0" HighSection="*" />
+        </FilePublisherCondition>
+      </Conditions>
+    </FilePublisherRule>
+  </RuleCollection>
+
+</AppLockerPolicy>
